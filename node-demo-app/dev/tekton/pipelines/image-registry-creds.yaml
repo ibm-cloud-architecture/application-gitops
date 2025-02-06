@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: <REPLACE>
+data:
+  .dockerconfigjson: <REPLACE>
+type: kubernetes.io/dockerconfigjson

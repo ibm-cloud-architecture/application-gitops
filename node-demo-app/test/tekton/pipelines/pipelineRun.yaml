@@ -1,0 +1,33 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: nodejs-build-deploy-
+  namespace: bkribbs
+  labels:
+    tekton.dev/pipeline: nodejs-build-deploy
+spec:
+  params:
+    - name: url
+      value: 'https://github.ibm.com/bakribbs/node-demo-app'
+    - name: revision
+      value: master
+    - name: image-server
+      value: quay.io
+    - name: image-name
+      value: node-demo-app
+    - name: image-namespace
+      value: bkribbs15
+  pipelineRef:
+    name: nodejs-build-deploy
+  serviceAccountName: pipeline
+  timeout: 1h0m0s
+  workspaces:
+  - name: source # this workspace name must be declared in the Pipeline
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+          - ReadWriteOnce # access mode may affect how you can use this volume in parallel tasks
+        resources:
+          requests:
+            storage: 3Gi
+        volumeMode: Filesystem

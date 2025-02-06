@@ -1,0 +1,77 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: gitops-update
+  annotations:
+    description: Executes testing for a NodeJS application
+  labels:
+    version: 1.0.0
+spec:
+  params:
+    - name: gitops-url
+      default: 'https://github.ibm.com/bakribbs/application-gitops'
+    - name: gitops-dir
+      default: '/gitops'
+    - name: js-image
+      default: docker.io/mikefarah/yq
+    - name: revision
+      default: main
+    - name: image-tag
+    - name: yaml-dir
+      default: 'node-demo-app/dev/openshift'
+  workspaces:
+    - name: gitops
+      description: The git repo will be cloned onto the volume backing this workspace
+      mountPath: $(params.gitops-dir)
+  steps:
+    - name: git-clone
+      image: quay.io/ibmgaragecloud/alpine-git
+      env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: GIT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: git-credentials
+              key: password
+              optional: true
+        - name: GIT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: git-credentials
+              key: username
+              optional: true
+        - name: REGISTRY_RELEASE_SERVER
+          valueFrom:
+            secretKeyRef:
+              name: registry-access
+              key: REGISTRY_URL
+              optional: true
+        - name: REGISTRY_RELEASE_NAMESPACE
+          valueFrom:
+            secretKeyRef:
+              name: registry-access
+              key: REGISTRY_NAMESPACE
+              optional: true
+      script: |
+        set +x
+        echo 'Cloning GitOps'
+        cd /workspace/gitops
+        rm -rf lost+found
+
+        if [[ -n "${GIT_USERNAME}" ]] && [[ -n "${GIT_PASSWORD}" ]]; then
+            git clone "$(echo $(params.gitops-url) | awk -F '://' '{print $1}')://${GIT_USERNAME}:${GIT_PASSWORD}@$(echo $(params.gitops-url) | awk -F '://' '{print $2}')" $(workspaces.gitops.path)
+        else
+            git clone $(params.gitops-url) $(workspaces.gitops.path)
+        fi
+        
+        cd $(workspaces.gitops.path)
+        git checkout $(params.revision)
+
+    - name: update-version
+      image: $(params.js-image)
+      workingDir: $(params.gitops-dir)
+      script: |
+        echo 'Hello World'

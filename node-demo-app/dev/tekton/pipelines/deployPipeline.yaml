@@ -1,0 +1,133 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: nodejs-build-deploy
+  annotations:
+    app.openshift.io/runtime: nodejs
+spec:
+  workspaces:
+    - name: source
+      description: The git repo will be cloned onto the volume backing this workspace
+    - name: gitops
+      description: The git repo will be cloned onto the volume backing this workspace
+  params:
+    - name: url
+      description: The url for the git repository
+    - name: revision
+      description: The git revision (branch, tag, or sha) that should be built
+      default: master
+    - name: image-server
+      description: image registry for the images.
+      default: quay.io
+    - name: image-namespace
+      description: image account for the images registry.
+      default: bkribbs15
+    - name: image-repository
+      description: image name for the images.
+      default: node-demo-app
+    - name: image-tag
+      description: image tag for the images.
+      default: v1.1
+    - name: gitops-url
+      description: URL for the GitOps Repo
+    - name: gitops-dir
+      description: Directory for the GitOps Repo
+    - name: yaml-dir
+      description: Directory in the GitOps Repo 
+  tasks:
+    - name: setup
+      taskRef:
+        name: setup-task
+      workspaces:
+        - name: source
+          workspace: source
+      params:
+        - name: url
+          value: $(params.url)
+        - name: revision
+          value: $(params.revision)
+        - name: image-server
+          value: $(params.image-server)
+        - name: image-namespace
+          value: $(params.image-namespace)
+        - name: image-repository
+          value: $(params.image-repository)
+        - name: image-tag
+          value: $(params.image-tag)
+        - name: gitops-url
+          value: $(params.gitops-url)
+        - name: gitops-dir
+          value: $(params.gitops-dir)
+        - name: yaml-dir
+          value: $(params.yaml-dir)
+    - name: test
+      taskRef:
+        name: nodejs-test
+      workspaces:
+        - name: source
+          workspace: source
+      runAfter:
+        - setup
+      params:
+        - name: url
+          value: "$(tasks.setup.results.url)"
+        - name: revision
+          value: "$(tasks.setup.results.revision)"
+        - name: source-dir
+          value: "$(tasks.setup.results.source-dir)"
+        - name: js-image
+          value: "$(tasks.setup.results.js-image)"
+    - name: version-update
+      taskRef:
+        name: increment-image-version
+      runAfter:
+        - setup
+      params:
+        - name: image-tag
+          value: "$(tasks.setup.results.image-tag)"
+    - name: build-push
+      taskRef:
+        name: ibm-build-tag-push
+      workspaces:
+        - name: source
+          workspace: source
+      runAfter:
+        - test
+        - version-update
+      params:
+        - name: url
+          value: "$(tasks.setup.results.url)"
+        - name: revision
+          value: "$(tasks.setup.results.revision)"
+        - name: source-dir
+          value: "$(tasks.setup.results.source-dir)"
+        - name: image-server
+          value: "$(tasks.setup.results.image-server)"
+        - name: image-namespace
+          value: "$(tasks.setup.results.image-namespace)"
+        - name: image-repository
+          value: "$(tasks.setup.results.image-repository)"
+        - name: image-tag
+          value: "$(tasks.version-update.results.image-tag)"
+    - name: gitops-update
+      taskRef:
+        name: gitops-update
+      workspaces:
+        - name: gitops
+          workspace: gitops
+      runAfter:
+        - build-push
+      params:
+        - name: gitops-url
+          value: "$(tasks.setup.results.gitops-url)"
+        - name: gitops-dir
+          value: "$(tasks.setup.results.gitops-dir)"
+        - name: yaml-dir
+          value: "$(tasks.setup.results.yaml-dir)"
+        - name: revision
+          value: "$(tasks.setup.results.revision)"
+        - name: js-image
+          value: "$(tasks.setup.results.js-image)"
+        - name: image-tag
+          value: "$(tasks.version-update.results.image-tag)"
+

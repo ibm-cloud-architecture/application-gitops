@@ -1,0 +1,104 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: nodejs-build-deploy
+  annotations:
+    app.openshift.io/runtime: nodejs
+spec:
+  workspaces:
+    - name: source
+      description: The git repo will be cloned onto the volume backing this workspace
+  params:
+    - name: url
+      description: The url for the git repository
+    - name: revision
+      description: The git revision (branch, tag, or sha) that should be built
+      default: master
+  tasks:
+    - name: setup
+      taskRef:
+        name: setup-task
+      workspaces:
+        - name: source
+          workspace: source
+      params:
+        - name: url
+          value: $(params.url)
+        - name: revision
+          value: $(params.revision)
+    - name: test
+      taskRef:
+        name: nodejs-test
+      workspaces:
+        - name: source
+          workspace: source
+      runAfter:
+        - setup
+      params:
+        - name: url
+          value: "$(tasks.setup.results.url)"
+        - name: revision
+          value: "$(tasks.setup.results.revision)"
+        - name: source-dir
+          value: "$(tasks.setup.results.source-dir)"
+        - name: js-image
+          value: "$(tasks.setup.results.js-image)"
+        - name: app-name
+          value: $(tasks.setup.results.app-name)
+    - name: build-push
+      taskRef:
+        name: ibm-build-tag-push
+      workspaces:
+        - name: source
+          workspace: source
+      runAfter:
+        - test
+      params:
+        - name: url
+          value: "$(tasks.setup.results.url)"
+        - name: revision
+          value: "$(tasks.setup.results.revision)"
+        - name: source-dir
+          value: "$(tasks.setup.results.source-dir)"
+        - name: image-server
+          value: "$(tasks.setup.results.image-server)"
+        - name: image-namespace
+          value: "$(tasks.setup.results.image-namespace)"
+        - name: image-repository
+          value: "$(tasks.setup.results.image-repository)"
+        - name: image-tag
+          value: "$(tasks.setup.results.image-tag)"
+#    - name: version-update
+#      taskRef:
+#        name: version-updating
+#      runAfter:
+#        - build-push
+#      params:
+#        - name: git-url
+#          value: "$(tasks.setup.results.git-url)"
+#        - name: git-revision
+#          value: "$(tasks.setup.results.git-revision)"
+#        - name: source-dir
+#          value: "$(tasks.setup.results.source-dir)"
+#        - name: image-server
+#          value: "$(tasks.setup.results.image-server)"
+#        - name: image-namespace
+#          value: "$(tasks.setup.results.image-namespace)"
+#        - name: image-repository
+#          value: "$(tasks.setup.results.image-repository)"
+#        - name: image-tag
+#          value: "$(tasks.setup.results.image-tag)"
+#        - name: app-namespace
+#          value: "$(tasks.setup.results.app-namespace)"
+#        - name: app-name
+#          value: "$(tasks.setup.results.app-name)"
+#   - name: gitops-update
+#      taskRef:
+#        name: update-gitops
+#      runAfter:
+#        - version-update
+#      params:
+#        - name: app-namespace
+#         value: "$(tasks.setup.results.app-namespace)"
+#       - name: app-name
+#         value: "$(tasks.setup.results.app-name)"

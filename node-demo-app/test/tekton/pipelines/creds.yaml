@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: git-credentials
+  annotations:
+    tekton.dev/git-0: github.ibm.com
+type: kubernetes.io/basic-auth
+stringData:
+  username: <REPLACE>
+  password: <REPLACE>

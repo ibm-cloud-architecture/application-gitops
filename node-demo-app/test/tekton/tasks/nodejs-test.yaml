@@ -1,0 +1,45 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: nodejs-test
+  annotations:
+    description: Executes testing for a NodeJS application
+  labels:
+    version: 1.0.0
+spec:
+  params:
+    - name: url
+    - name: js-image
+      default: node
+    - name: revision
+      default: master
+    - name: source-dir
+      default: /source
+  workspaces:
+    - name: source
+      description: The git repo will be cloned onto the volume backing this workspace
+      mountPath: $(params.source-dir)
+  steps:
+    - name: build
+      image: $(params.js-image)
+      workingDir: $(params.source-dir)
+      env:
+      - name: npm_config_registry
+        valueFrom:
+          secretKeyRef:
+            name: npm-config
+            key: npm_config_registry
+            optional: true
+      script: |
+        npm install
+        if [ -d client ]; then
+          cd client
+          npm install
+          cd -
+        fi
+        npm run build --if-present
+    - name: test
+      image: $(params.js-image)
+      workingDir: $(params.source-dir)
+      script: |
+        CI=true npm test

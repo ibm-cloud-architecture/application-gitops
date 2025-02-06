@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-demo-deployment
+  labels:
+    app: demo
+spec:
+  selector:
+    matchLabels:
+      app: demo
+  template:
+    metadata:
+      labels:
+        app: demo
+    spec:
+      containers:
+      - name: nodejs-pod
+        image: quay.io/bkribbs15/node-demo-app:v1.2
+        resources:
+          limits:
+            memory: "1Gi"
+            cpu: "200m"
+          requests:
+            memory: "256Mi"
+            cpu: "5m"
+        ports:
+          - containerPort: 3000
+            name: http
+        imagePullPolicy: Always
+      imagePullSecrets:
+      - name: bkribbs15-pull-secret

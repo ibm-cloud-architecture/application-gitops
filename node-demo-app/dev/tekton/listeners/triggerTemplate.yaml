@@ -1,0 +1,66 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: github-pr-pipeline-template
+spec:
+  params:
+  - name: gitrevision
+    description: The git revision
+    default: main
+  - name: gitrepositoryurl
+    description: The git repository url
+  - name: message
+    description: The message to print
+    default: This is the default message
+  - name: contenttype
+    description: The Content-Type of the event
+    default: application/json
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1beta1
+    kind: PipelineRun
+    metadata:
+     generateName: nodejs-build-deploy-customsa-
+     namespace: dev
+     labels:
+      tekton.dev/pipeline: nodejs-build-deploy
+    spec:
+      params:
+        - name: url
+          value: 'https://github.ibm.com/bakribbs/node-demo-app'
+        - name: revision
+          value: master
+        - name: image-server
+          value: quay.io
+        - name: image-name
+          value: node-demo-app
+        - name: image-namespace
+          value: bkribbs15
+        - name: gitops-url
+          value: 'https://github.ibm.com/bakribbs/application-gitops'
+        - name: gitops-dir
+          value: '/gitops'
+        - name: yaml-dir
+          value: 'node-demo-app/dev/openshift'
+      pipelineRef:
+        name: nodejs-build-deploy
+      serviceAccountName: pipelines-sa-userid-1000
+      timeout: 1h0m0s
+      workspaces:
+      - name: source # this workspace name must be declared in the Pipeline
+        volumeClaimTemplate:
+          spec:
+            accessModes:
+              - ReadWriteOnce # access mode may affect how you can use this volume in parallel tasks
+            resources:
+              requests:
+                storage: 2Gi
+            volumeMode: Filesystem
+      - name: gitops # this workspace name must be declared in the Pipeline
+        volumeClaimTemplate:
+          spec:
+            accessModes:
+              - ReadWriteOnce # access mode may affect how you can use this volume in parallel tasks
+            resources:
+              requests:
+                storage: 1Gi
+            volumeMode: Filesystem

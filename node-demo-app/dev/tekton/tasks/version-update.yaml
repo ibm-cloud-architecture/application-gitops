@@ -1,0 +1,27 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: increment-image-version
+spec:
+  params:
+    - name: image-tag
+  results:
+    - name: image-tag
+  steps:
+  - name: increment-version
+    image: alpine:latest
+    script: |
+      set -e
+      echo "Incoming Version = $(params.image-tag)"
+
+      IMAGE_VERSION=$(params.image-tag)
+
+      new_version=$(echo $IMAGE_VERSION | awk -F. '{print $1 "." $2 + 1}')
+      echo "New version: $new_version"
+      IMAGE_VERSION=$new_version
+
+      echo -n "${IMAGE_VERSION}">$(results.image-tag.path)
+
+      echo "Final Image Version = $IMAGE_VERSION"
+
+      for f in /tekton/results/*; do echo "results.$(basename $f)=$(cat $f)"; done
