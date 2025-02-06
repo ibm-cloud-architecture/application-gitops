@@ -26,7 +26,7 @@ spec:
     spec:
       params:
         - name: url
-          value: 'https://github.ibm.com/bakribbs/node-demo-app'
+          value: 'https://github.com/ibm-cloud-architecture/node-demo-app'
         - name: revision
           value: master
         - name: image-server
@@ -36,7 +36,7 @@ spec:
         - name: image-namespace
           value: bkribbs15
         - name: gitops-url
-          value: 'https://github.ibm.com/bakribbs/application-gitops'
+          value: 'https://github.com/ibm-cloud-architecture/application-gitops'
         - name: gitops-dir
           value: '/gitops'
         - name: yaml-dir

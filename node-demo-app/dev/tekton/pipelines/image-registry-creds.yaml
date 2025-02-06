@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: <REPLACE>
+  name: image-registry-credentials
 data:
   .dockerconfigjson: <REPLACE>
 type: kubernetes.io/dockerconfigjson

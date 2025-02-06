@@ -9,7 +9,7 @@ metadata:
 spec:
   params:
     - name: gitops-url
-      default: 'https://github.ibm.com/bakribbs/application-gitops'
+      default: 'https://github.com/ibm-cloud-architecture/application-gitops'
     - name: gitops-dir
       default: '/gitops'
     - name: js-image
